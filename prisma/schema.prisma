@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model JwtRefreshToken {
+  jti     Int      @id @default(autoincrement())
+  sub     Int
+  revoked Boolean  @default(false)
+  exp     DateTime
+  iat     DateTime
+
+  @@index([sub, revoked])
+  @@map("jwt_refresh_token")
+}
+
+model UserAuth {
+  id                Int      @id @default(autoincrement())
+  baseUserId        Int      @unique
+  login             String   @unique
+  hashPassword      String
+  passwordUpdatedAt DateTime @default(now())
+
+  @@map("user_auth")
+}

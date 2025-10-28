@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "jwt_refresh_token" ADD COLUMN     "createadAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ALTER COLUMN "revoked" SET DEFAULT false;
