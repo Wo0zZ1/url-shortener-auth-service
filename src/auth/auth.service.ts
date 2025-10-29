@@ -80,7 +80,7 @@ export class AuthService implements OnModuleInit {
 
 	async registerUser(
 		registerDto: RegisterUserDto,
-		guestUUID?: string,
+		guestUuid?: string,
 	): Promise<RegisterUserResponse> {
 		const { login, password, ...createUserDto } = registerDto
 
@@ -89,7 +89,7 @@ export class AuthService implements OnModuleInit {
 
 		let createdUser: UserEntity
 
-		if (guestUUID) createdUser = await this.migrateAccount(guestUUID, registerDto)
+		if (guestUuid) createdUser = await this.migrateAccount(guestUuid, registerDto)
 		else createdUser = await this.usersClient.create(createUserDto)
 
 		const hashPassword = await bcrypt.hash(password, 12)
@@ -118,10 +118,10 @@ export class AuthService implements OnModuleInit {
 	}
 
 	async migrateAccount(
-		guestUUID: string,
+		guestUuid: string,
 		migrateGuestDto: MigrateGuestDto,
 	): Promise<UserEntity> {
-		const guestEntity = await this.usersClient.findByUUID(guestUUID)
+		const guestEntity = await this.usersClient.findByUUID(guestUuid)
 
 		if (!guestEntity) throw new NotFoundException('Guest user not found')
 
@@ -149,11 +149,11 @@ export class AuthService implements OnModuleInit {
 		)
 	}
 
-	async login(loginDto: LoginDto, guestUUID?: string): Promise<LoginResponse> {
+	async login(loginDto: LoginDto, guestUuid?: string): Promise<LoginResponse> {
 		const user = await this.validateUser(loginDto.login, loginDto.password)
 
-		if (guestUUID) {
-			const guestUser = await this.usersClient.findByUUID(guestUUID)
+		if (guestUuid) {
+			const guestUser = await this.usersClient.findByUUID(guestUuid)
 
 			if (!guestUser) console.error('Error in guest migration: Guest not found')
 			else if (user.userProfile) this.mergeAccountsData(guestUser.id, user.id)

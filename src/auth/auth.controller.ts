@@ -9,7 +9,6 @@ import {
 	Get,
 	Param,
 	ParseIntPipe,
-	Query,
 	Headers,
 } from '@nestjs/common'
 
@@ -49,18 +48,18 @@ export class AuthController {
 	@Post('register-user')
 	async register(
 		@Body() registerDto: RegisterUserDto,
-		@Query('guestUUID') guestUUID?: string,
+		@Headers('x-guest-uuid') guestUuid?: string,
 	): Promise<RegisterUserResponse> {
-		return await this.authService.registerUser(registerDto, guestUUID)
+		return await this.authService.registerUser(registerDto, guestUuid)
 	}
 
 	@Post('login')
 	@HttpCode(HttpStatus.OK)
 	async login(
 		@Body() loginDto: LoginDto,
-		@Query('guestUUID') guestUUID?: string,
+		@Headers('x-guest-uuid') guestUuid?: string,
 	): Promise<LoginResponse> {
-		return await this.authService.login(loginDto, guestUUID)
+		return await this.authService.login(loginDto, guestUuid)
 	}
 
 	@Post('refresh')

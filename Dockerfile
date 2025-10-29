@@ -5,13 +5,13 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-COPY prisma ./prisma
+COPY . .
+
 RUN npx prisma generate
 
-COPY . .
 RUN yarn build
 
-RUN yarn install --production --frozen-lockfile
+RUN yarn workspaces focus --production || yarn install --production --frozen-lockfile --ignore-scripts --prefer-offline
 
 FROM node:22-alpine AS production
 
