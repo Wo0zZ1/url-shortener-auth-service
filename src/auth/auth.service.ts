@@ -14,7 +14,6 @@ import { ClientProxy } from '@nestjs/microservices'
 import {
 	AccessTokenPayload,
 	EEventPattern,
-	EventService,
 	LoginDto,
 	LoginResponse,
 	MigrateGuestDto,
@@ -30,6 +29,8 @@ import {
 	CreateAccessTokenPayload,
 	CreateRefreshTokenPayload,
 	RefreshTokenPayload,
+	EVENT_EMITTER_NAME,
+	UserDeletedEvent,
 } from '@wo0zz1/url-shortener-shared'
 
 import { UsersHttpClient } from '../users/user.http-client'
@@ -39,16 +40,15 @@ import { PrismaService } from 'src/prisma/prisma.service'
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-	private readonly accessTokenExpiresIn: number
 	private readonly refreshTokenExpiresIn: number
+	private readonly accessTokenExpiresIn: number
 	private readonly gatewaySecret: string
 
 	constructor(
 		private readonly usersClient: UsersHttpClient,
 		private readonly jwtService: JwtService,
 		private readonly prismaService: PrismaService,
-
-		@Inject(EventService.USER_SERVICE) private readonly userServiceClient: ClientProxy,
+		@Inject(EVENT_EMITTER_NAME) private readonly eventEmitter: ClientProxy,
 	) {
 		const accessExpiresInString = process.env.JWT_ACCESS_EXPIRES_IN
 		if (!accessExpiresInString)
@@ -62,7 +62,7 @@ export class AuthService implements OnModuleInit {
 	}
 
 	async onModuleInit() {
-		await Promise.all([this.userServiceClient.connect()])
+		await Promise.all([this.eventEmitter.connect()])
 	}
 
 	async validateUser(login: string, password: string): Promise<UserEntity> {
@@ -76,6 +76,17 @@ export class AuthService implements OnModuleInit {
 		if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials')
 
 		return user
+	}
+
+	async registerGuest(): Promise<RegisterGuestResponse> {
+		const uuid = randomUUID()
+
+		const createdUser = await this.usersClient.create({
+			type: 'Guest',
+			uuid,
+		})
+
+		return { createdUser }
 	}
 
 	async registerUser(
@@ -99,22 +110,13 @@ export class AuthService implements OnModuleInit {
 				data: { baseUserId: createdUser.id, login, hashPassword },
 			})
 		} catch (error) {
-			await this.usersClient.deleteById(createdUser.id).catch(() => {})
+			this.eventEmitter.emit(EEventPattern.USER_DELETED, { userId: createdUser.id })
 			throw error
 		}
 
-		return { createdUser }
-	}
+		const tokens = await this.generateTokens(createdUser.id, createdUser.type)
 
-	async registerGuest(): Promise<RegisterGuestResponse> {
-		const uuid = randomUUID()
-
-		const createdUser = await this.usersClient.create({
-			type: 'Guest',
-			uuid,
-		})
-
-		return { createdUser }
+		return { createdUser, tokens }
 	}
 
 	async migrateAccount(
@@ -142,7 +144,7 @@ export class AuthService implements OnModuleInit {
 			targetUserId: targetEntityId,
 			timestamp: new Date(),
 		}
-		this.userServiceClient.emit(EEventPattern.USER_ACCOUNTS_MERGED, accountsMergedEvent)
+		this.eventEmitter.emit(EEventPattern.USER_ACCOUNTS_MERGED, accountsMergedEvent)
 		console.log(
 			`Emitted ${EEventPattern.USER_ACCOUNTS_MERGED} with data:`,
 			accountsMergedEvent,
@@ -349,6 +351,26 @@ export class AuthService implements OnModuleInit {
 			if (error.code === 'P2025') throw new NotFoundException('Session not found')
 			throw error
 		}
+	}
+
+	async deleteUser(userId: number): Promise<void> {
+		// Проверяем существование пользователя
+		const userAuth = await this.prismaService.userAuth.findUnique({
+			where: { baseUserId: userId },
+		})
+
+		if (!userAuth) {
+			throw new NotFoundException('User authentication data not found')
+		}
+
+		// Отправляем событие USER_DELETED
+		// Auth-service сам обработает это событие и удалит свои данные
+		const userDeletedEvent: UserDeletedEvent = {
+			userId,
+			timestamp: new Date(),
+		}
+		this.eventEmitter.emit(EEventPattern.USER_DELETED, userDeletedEvent)
+		console.log(`Emitted ${EEventPattern.USER_DELETED} with data:`, userDeletedEvent)
 	}
 
 	async getUserAuthByLogin(

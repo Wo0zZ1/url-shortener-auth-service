@@ -1,4 +1,4 @@
-import { getAuthMicroserviceConfig } from '@wo0zz1/url-shortener-shared'
+import { EventQueue, getMicroserviceConfig } from '@wo0zz1/url-shortener-shared'
 import { NestFactory } from '@nestjs/core'
 import cookieParser from 'cookie-parser'
 
@@ -29,7 +29,7 @@ async function bootstrap() {
 	console.log(`🚀 Auth Service is running on: http://localhost:${PORT}`)
 
 	try {
-		app.connectMicroservice(getAuthMicroserviceConfig(RABBITMQ_URL))
+		app.connectMicroservice(getMicroserviceConfig(RABBITMQ_URL, EventQueue.AUTH_SERVICE))
 		await app.startAllMicroservices()
 		console.log('Auth Service started with RabbitMQ')
 	} catch (error) {

@@ -20,6 +20,7 @@ import {
 	LogoutAllResponse,
 	GetActiveSessionsResponse,
 	RevokeSessionResponse,
+	DeleteUserResponse,
 	RefreshTokenResponse,
 	RegisterGuestResponse,
 	RegisterUserDto,
@@ -106,5 +107,14 @@ export class AuthController {
 	): Promise<RevokeSessionResponse> {
 		await this.authService.revokeSession(userId, jti)
 		return { message: 'Session revoked' }
+	}
+
+	@Delete('user/:userId')
+	@HttpCode(HttpStatus.OK)
+	async deleteUser(
+		@Param('userId', ParseIntPipe) userId: number,
+	): Promise<DeleteUserResponse> {
+		await this.authService.deleteUser(userId)
+		return { message: 'Deletion initiated' }
 	}
 }

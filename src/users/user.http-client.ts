@@ -1,18 +1,10 @@
-import {
-	Injectable,
-	HttpException,
-	HttpStatus,
-	ConflictException,
-	NotFoundException,
-} from '@nestjs/common'
+import { Injectable, HttpException, HttpStatus, ConflictException } from '@nestjs/common'
 import { HttpService } from '@nestjs/axios'
 import { firstValueFrom } from 'rxjs'
 
 import {
 	CreateUserDto,
 	CreateUserResponse,
-	DeleteUserByIdResponse,
-	DeleteUserByUuidResponse,
 	GetUserByIdResponse,
 	GetUserByUuidResponse,
 	UpdateUserDto,
@@ -111,42 +103,6 @@ export class UsersHttpClient {
 		} catch (error) {
 			if (error.response?.status === 404) return null
 			throw new HttpException('User service unavailable', HttpStatus.SERVICE_UNAVAILABLE)
-		}
-	}
-
-	async deleteById(userId: number): Promise<UserEntity> {
-		try {
-			const response = await firstValueFrom(
-				this.httpService.delete<DeleteUserByIdResponse>(
-					`${this.baseUrl}/users/id/${userId}`,
-					{ headers: this.getGatewayHeaders() },
-				),
-			)
-			const user = response.data
-
-			return user
-		} catch (error) {
-			if (error.response?.status === 404) throw new NotFoundException()
-			console.error(`Failed to delete user: ${userId}`, error)
-			throw error
-		}
-	}
-
-	async deleteByUuid(userUuid: number): Promise<UserEntity> {
-		try {
-			const response = await firstValueFrom(
-				this.httpService.delete<DeleteUserByUuidResponse>(
-					`${this.baseUrl}/users/id/${userUuid}`,
-					{ headers: this.getGatewayHeaders() },
-				),
-			)
-			const user = response.data
-
-			return user
-		} catch (error) {
-			if (error.response?.status === 404) throw new NotFoundException()
-			console.error(`Failed to delete user: ${userUuid}`, error)
-			throw error
 		}
 	}
 }
